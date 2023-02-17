@@ -46,7 +46,7 @@ struct trapframe {
   /*  16 */ uint64 kernel_trap;   // usertrap()
   /*  24 */ uint64 epc;           // saved user program counter
   /*  32 */ uint64 kernel_hartid; // saved kernel tp
-  /*  40 */ uint64 ra;
+  /*  40 */ uint64 ra; 
   /*  48 */ uint64 sp;
   /*  56 */ uint64 gp;
   /*  64 */ uint64 tp;
@@ -104,4 +104,6 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  
+  int traceID;              // traceID set by SYS_trace
 };

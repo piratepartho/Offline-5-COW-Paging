@@ -89,3 +89,19 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_trace(void)
+{
+  argint(0,&myproc()->traceID); //setting the system call to trace in proc
+  return 0;
+}
+
+uint64
+sys_sysinfo(void)
+{
+  printf("\nsysinfo system call prints:\n");
+  printf("free-memory: %d bytes\n", getFreeMemorySize());
+  printf("n_proc: %d\n\n",getProcNumber());
+  return 1;
+}
