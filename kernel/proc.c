@@ -127,6 +127,7 @@ found:
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
+    if(DEBUG) printf("In allocproc calling freeproc\n");
     freeproc(p);
     release(&p->lock);
     return 0;
@@ -135,6 +136,7 @@ found:
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
   if(p->pagetable == 0){
+    if(DEBUG) printf("In allocproc empty page calling freeproc\n");
     freeproc(p);
     release(&p->lock);
     return 0;
@@ -158,8 +160,10 @@ freeproc(struct proc *p)
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
-  if(p->pagetable)
+  if(p->pagetable){
+    if(DEBUG) printf("in freeproc\n");
     proc_freepagetable(p->pagetable, p->sz);
+  }
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -189,6 +193,7 @@ proc_pagetable(struct proc *p)
   // to/from user space, so not PTE_U.
   if(mappages(pagetable, TRAMPOLINE, PGSIZE,
               (uint64)trampoline, PTE_R | PTE_X) < 0){
+    if(DEBUG) printf("calling uvmfree proc_page 192\n");
     uvmfree(pagetable, 0);
     return 0;
   }
@@ -198,6 +203,7 @@ proc_pagetable(struct proc *p)
   if(mappages(pagetable, TRAPFRAME, PGSIZE,
               (uint64)(p->trapframe), PTE_R | PTE_W) < 0){
     uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+    if(DEBUG) printf("calling uvmfree in proc_pagetable\n");
     uvmfree(pagetable, 0);
     return 0;
   }
@@ -212,6 +218,7 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
 {
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
+  if(DEBUG) printf("calling uvmfree proc_freepage\n");
   uvmfree(pagetable, sz);
 }
 
@@ -290,6 +297,7 @@ fork(void)
 
   // Copy user memory from parent to child.
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
+    if(DEBUG) printf("In fork calling freeproc\n");
     freeproc(np);
     release(&np->lock);
     return -1;
@@ -414,6 +422,7 @@ wait(uint64 addr)
             release(&wait_lock);
             return -1;
           }
+          if(DEBUG) printf("In wait calling freeproc pid: %d\n", pp->pid);
           freeproc(pp);
           release(&pp->lock);
           release(&wait_lock);

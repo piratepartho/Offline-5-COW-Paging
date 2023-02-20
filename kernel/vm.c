@@ -260,6 +260,7 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 
   if(PGROUNDUP(newsz) < PGROUNDUP(oldsz)){
     int npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;
+    if(DEBUG) printf("in uvmdealloc\n");
     uvmunmap(pagetable, PGROUNDUP(newsz), npages, 1);
   }
 
@@ -291,6 +292,7 @@ freewalk(pagetable_t pagetable)
 void
 uvmfree(pagetable_t pagetable, uint64 sz)
 {
+  if(DEBUG) printf("in uvmfree\n");
   if(sz > 0)
     uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1);
   freewalk(pagetable);
@@ -338,6 +340,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   return 0;
 
  err:
+  if(DEBUG) printf("IN ERROR\n");
   uvmunmap(new, 0, i / PGSIZE, 1);
   return -1;
 }
