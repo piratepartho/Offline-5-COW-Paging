@@ -163,7 +163,6 @@ freeproc(struct proc *p)
   if(p->pagetable){
     if(DEBUG) printf("in freeproc\n");
     proc_freepagetable(p->pagetable, p->sz);
-    printf("done\n");
   }
   p->pagetable = 0;
   p->sz = 0;

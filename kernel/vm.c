@@ -346,6 +346,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     if(mappages(old, i, PGSIZE, (uint64)pa, flags) != 0){
       goto err;
     }
+    // sys_getPageInfo();
   }
   return 0;
 
