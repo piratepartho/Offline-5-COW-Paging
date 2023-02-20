@@ -315,6 +315,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   uint64 pa, i;
   uint flags;
   // char *mem;
+  if(DEBUG) printf("in uvmcopy\n");
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
@@ -330,7 +331,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       goto err;
     }
     else{
-      increaseRef((void*) pa);
+      increaseRef(pa);
     }
 
     // panic(remap) in mappages;

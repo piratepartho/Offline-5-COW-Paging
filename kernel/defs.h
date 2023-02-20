@@ -9,7 +9,8 @@ struct sleeplock;
 struct stat;
 struct superblock;
 
-#define DEBUG 1
+#define DEBUG 0
+
 
 // bio.c
 void            binit(void);
@@ -66,8 +67,8 @@ void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
 int             getFreeMemorySize(void);
-void            increaseRef(void *);
-void            decreaseRef(void *);
+void            increaseRef(uint64);
+// void            decreaseRef(void *);
 
 // log.c
 void            initlog(int, struct superblock*);

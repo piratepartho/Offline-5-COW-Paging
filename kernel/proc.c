@@ -163,6 +163,7 @@ freeproc(struct proc *p)
   if(p->pagetable){
     if(DEBUG) printf("in freeproc\n");
     proc_freepagetable(p->pagetable, p->sz);
+    printf("done\n");
   }
   p->pagetable = 0;
   p->sz = 0;
@@ -218,7 +219,7 @@ proc_freepagetable(pagetable_t pagetable, uint64 sz)
 {
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
-  if(DEBUG) printf("calling uvmfree proc_freepage\n");
+  if(DEBUG) printf("calling uvmfree proc_freepage size: %d\n",sz);
   uvmfree(pagetable, sz);
 }
 
@@ -289,6 +290,8 @@ fork(void)
   int i, pid;
   struct proc *np;
   struct proc *p = myproc();
+
+  if(DEBUG) printf("fork called by pid: %d\n",p->pid);
 
   // Allocate process.
   if((np = allocproc()) == 0){

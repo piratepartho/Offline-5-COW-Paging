@@ -96,7 +96,7 @@ usertrap(void)
 
     if((pte = walk(p->pagetable, pageFaultva, 0)) == 0)
       panic("usertrap(): pte does not exist");
-    if((*pte & PTE_V) ==0) 
+    if((*pte & PTE_V) == 0) 
       panic("usertrap(): pte is invalid");
 
     uint64 pa = PTE2PA(*pte);
@@ -109,9 +109,10 @@ usertrap(void)
     char* mem;
     if((mem = kalloc()) == 0)
       goto err;
-    memmove(mem ,(char*)pa, PGSIZE );
+    memmove(mem ,(char*)pa, PGSIZE);
     
-    decreaseRef((void*) pa);
+    // decreaseRef((void*) pa);
+    kfree((void*) pa);
     uvmunmap(p->pagetable, pageFaultva, 1, 0);
     
     if(mappages(p->pagetable, pageFaultva, PGSIZE, (uint64)mem, flags) != 0){
@@ -196,6 +197,7 @@ usertrapret(void)
 void 
 kerneltrap()
 {
+  // if(DEBUG) printf("kt ");
   int which_dev = 0;
   uint64 sepc = r_sepc();
   uint64 sstatus = r_sstatus();
