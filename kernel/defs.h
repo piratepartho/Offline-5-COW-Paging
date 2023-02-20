@@ -9,7 +9,7 @@ struct sleeplock;
 struct stat;
 struct superblock;
 
-#define DEBUG 1
+#define DEBUG 0
 
 // bio.c
 void            binit(void);
@@ -151,6 +151,7 @@ void            trapinit(void);
 void            trapinithart(void);
 extern struct spinlock tickslock;
 void            usertrapret(void);
+void            bin(int);
 
 // uart.c
 void            uartinit(void);

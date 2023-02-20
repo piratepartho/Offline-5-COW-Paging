@@ -179,10 +179,14 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
       panic("uvmunmap: walk");
+    if(DEBUG) printf("va: %d\n");
     if((*pte & PTE_V) == 0)
       panic("uvmunmap: not mapped");
-    if(PTE_FLAGS(*pte) == PTE_V)
+    if(PTE_FLAGS(*pte) == PTE_V){
+      bin(PTE_FLAGS(*pte));
       panic("uvmunmap: not a leaf");
+    }
+      
     if(do_free){
       uint64 pa = PTE2PA(*pte);
       kfree((void*)pa);
@@ -317,22 +321,24 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       panic("uvmcopy: pte should exist");
     if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
+
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
     flags = flags & (~PTE_W);
-    // if((mem = kalloc()) == 0)
-    //   goto err;
-    // memmove(mem, (char*)pa, PGSIZE);
+
     if(mappages(new, i, PGSIZE, (uint64)pa, flags) != 0){
-      // kfree(mem);
       goto err;
     }
+
     // panic(remap) in mappages;
     // because we are updating flags in old pagetable
     // so unmap first, do_free(free the page) is false
     if(DEBUG) printf("unmapping\n");
+
     uvmunmap(old, i, 1, 0); 
+
     if(DEBUG) printf("DONE unmapping\n");
+
     if(mappages(old, i, PGSIZE, (uint64)pa, flags) != 0){
       goto err;
     }
@@ -342,6 +348,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
  err:
   if(DEBUG) printf("IN ERROR\n");
   uvmunmap(new, 0, i / PGSIZE, 1);
+  
   return -1;
 }
 

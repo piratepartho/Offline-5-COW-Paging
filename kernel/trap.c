@@ -49,6 +49,7 @@ void bin(int n)
   }
   printf("\n");
 }
+
 void
 usertrap(void)
 {
@@ -81,52 +82,48 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if(r_scause() == 15){
+  } 
+  else if(r_scause() == 15){
     //page fault
     if(DEBUG) printf("page fault detected\n");
-    pagetable_t currProcPT = p->pagetable;
+
+    uint64 pageFaultva = PGROUNDDOWN(r_stval());
+
+    if(DEBUG) printf("Page fault va: ");
+    if(DEBUG) bin(pageFaultva);
+
     pte_t *pte;
-    uint64 i, pa;
-    uint flags;
+
+    if((pte = walk(p->pagetable, pageFaultva, 0)) == 0)
+      panic("usertrap(): pte does not exist");
+    if((*pte & PTE_V) ==0) 
+      panic("usertrap(): pte is invalid");
+
+    uint64 pa = PTE2PA(*pte);
+    uint flags = PTE_FLAGS(*pte);
+    flags = flags | PTE_W;
+
     char* mem;
-    // pagetable_t newPTforProc;
-    for(i = 0; i < p->sz; i += PGSIZE){
-
-      if((pte = walk(currProcPT, i, 0)) == 0)
-        panic("usertrap(): pte not present");
-
-      if((*pte & PTE_V) == 0)
-        panic("usertrap(): page not valid");
-
-      pa = PTE2PA(*pte);
-      flags = PTE_FLAGS(*pte);
-      bin(flags);
-      flags = flags & PTE_W;
-
-      if((mem = kalloc()) == 0)
-        goto err;
-      
-      memmove(mem, (char*) pa, PGSIZE);
-
-      // need to unmap the current process pagetable entry, 
-      // still being used by another process, so no free memory
-      uvmunmap(currProcPT, i, 1, 0);
-      if(mappages(currProcPT, i, PGSIZE, (uint64)pa, flags) != 0){
-        goto err;
-      }
-      
-    } 
-    // p->pagetable = newPTforProc;
+    if((mem = kalloc()) == 0)
+      goto err;
+    memmove(mem ,(char*)pa, PGSIZE );
+    
+    uvmunmap(p->pagetable, pageFaultva, 1, 0);
+    
+    if(mappages(p->pagetable, pageFaultva, PGSIZE, (uint64)mem, flags) != 0){
+      kfree(mem);
+      goto err;
+    }
     if(DEBUG) printf("new pagetable created\n");
     goto done;
 
     err:
-    uvmunmap(currProcPT, 0, i/PGSIZE, 1);
     panic("usertrap(): unmapping");
 
     done:
     
-  } else if((which_dev = devintr()) != 0){
+  }
+  else if((which_dev = devintr()) != 0){
     // ok
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
