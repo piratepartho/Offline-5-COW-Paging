@@ -103,11 +103,15 @@ usertrap(void)
     uint flags = PTE_FLAGS(*pte);
     flags = flags | PTE_W;
 
+    if(DEBUG) printf("physical address: ");
+    if(DEBUG) bin(pa);
+
     char* mem;
     if((mem = kalloc()) == 0)
       goto err;
     memmove(mem ,(char*)pa, PGSIZE );
     
+    decreaseRef((void*) pa);
     uvmunmap(p->pagetable, pageFaultva, 1, 0);
     
     if(mappages(p->pagetable, pageFaultva, PGSIZE, (uint64)mem, flags) != 0){

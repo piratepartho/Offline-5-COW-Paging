@@ -329,6 +329,9 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     if(mappages(new, i, PGSIZE, (uint64)pa, flags) != 0){
       goto err;
     }
+    else{
+      increaseRef((void*) pa);
+    }
 
     // panic(remap) in mappages;
     // because we are updating flags in old pagetable

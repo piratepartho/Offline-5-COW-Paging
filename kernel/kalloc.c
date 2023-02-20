@@ -21,6 +21,7 @@ struct run {
 struct {
   struct spinlock lock;
   struct run *freelist;
+  int refCount[PHYSTOP/PGSIZE];
 } kmem;
 
 void
@@ -35,8 +36,12 @@ freerange(void *pa_start, void *pa_end)
 {
   char *p;
   p = (char*)PGROUNDUP((uint64)pa_start);
-  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
+  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE){
+    acquire(&kmem.lock);
+    kmem.refCount[(uint64) p / PGSIZE] = 1; // made it one so that kfree makes it 0
+    release(&kmem.lock);
     kfree(p);
+  }
 }
 
 // Free the page of physical memory pointed at by pa,
@@ -59,6 +64,7 @@ kfree(void *pa)
   acquire(&kmem.lock);
   r->next = kmem.freelist;
   kmem.freelist = r;
+  kmem.refCount[(uint64) pa / PGSIZE]--;
   release(&kmem.lock);
 }
 
@@ -76,8 +82,13 @@ kalloc(void)
     kmem.freelist = r->next;
   release(&kmem.lock);
 
-  if(r)
+  if(r){
     memset((char*)r, 5, PGSIZE); // fill with junk
+    acquire(&kmem.lock);
+    kmem.refCount[(uint64) r / PGSIZE] = 1;
+    release(&kmem.lock);
+  }
+    
   return (void*)r;
 }
 
@@ -91,4 +102,16 @@ int getFreeMemorySize()
   }
   release(&kmem.lock);
   return cnt;
+}
+
+void increaseRef(void* pa){
+  acquire(&kmem.lock);
+  kmem.refCount[(uint64) pa / PGSIZE]++;
+  release(&kmem.lock);
+}
+
+void decreaseRef(void* pa){
+  acquire(&kmem.lock);
+  kmem.refCount[(uint64) pa / PGSIZE]--;
+  release(&kmem.lock);
 }
