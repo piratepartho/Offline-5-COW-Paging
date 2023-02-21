@@ -14,8 +14,7 @@ int main()
     sleep(1);
     if(pid == 0){
         // sbrk((PHYSTOP - KERNBASE) / 3);
-        char *p = sbrk(4096);
-        * (int*) p = 1234;
+        // char *p = sbrk((PHYSTOP - KERNBASE) / 3);
         // for(char* q = p; q < p + (PHYSTOP - KERNBASE) / 3; q+=4096){
         //     *(int*) q = 1234;
         // }
