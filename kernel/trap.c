@@ -101,7 +101,12 @@ usertrap(void)
 
     uint64 pa = PTE2PA(*pte);
     uint flags = PTE_FLAGS(*pte);
-    flags = flags | PTE_W;
+
+    if(!(flags & PTE_COW))
+      panic("usertrap() : page fault without COW\n");
+
+    flags |= PTE_W;
+    flags &= (~PTE_COW); 
 
     if(DEBUG) printf("physical address: ");
     if(DEBUG) bin(pa);
@@ -111,8 +116,12 @@ usertrap(void)
       goto err;
     memmove(mem ,(char*)pa, PGSIZE);
     
-    // decreaseRef((void*) pa);
-    kfree((void*) pa);
+    // if there are one more referencing the COW page
+    // the page will remain
+    // TODO: last page referencing the COW page will also make a copy
+    // TODO: try to make it so that it does not copy
+    kfree((void*) pa); 
+
     uvmunmap(p->pagetable, pageFaultva, 1, 0);
     
     if(mappages(p->pagetable, pageFaultva, PGSIZE, (uint64)mem, flags) != 0){
