@@ -130,3 +130,15 @@ void increaseRef(uint64 pa){
   kmem.refCount[(uint64) pa / PGSIZE]++;
   release(&kmem.lock);
 }
+
+// # of process referencing the current page
+// used in usertrap() to deny unnecessary copy
+int getRef(uint64 pa){
+  int cnt;
+  acquire(&kmem.lock);
+  if(kmem.refCount[(uint64) pa / PGSIZE] == 0)
+    panic("increaseRef() : refCount == 0");
+  cnt = kmem.refCount[(uint64) pa / PGSIZE];
+  release(&kmem.lock);
+  return cnt;
+}

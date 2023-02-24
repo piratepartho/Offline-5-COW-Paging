@@ -68,7 +68,7 @@ void            kfree(void *);
 void            kinit(void);
 int             getFreeMemorySize(void);
 void            increaseRef(uint64);
-// void            decreaseRef(void *);
+int             getRef(uint64);
 
 // log.c
 void            initlog(int, struct superblock*);

@@ -135,6 +135,7 @@ UPROGS=\
 	$U/_trace\
 	$U/_sysinfotest\
 	$U/_cowtest5\
+	$U/_cowAll\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

@@ -111,25 +111,39 @@ usertrap(void)
     if(DEBUG) printf("physical address: ");
     if(DEBUG) bin(pa);
 
-    char* mem;
-    if((mem = kalloc()) == 0)
-      goto err;
-    memmove(mem ,(char*)pa, PGSIZE);
+    
     
     // if there are one more referencing the COW page
     // the page will remain
-    // TODO: last page referencing the COW page will also make a copy
-    // TODO: try to make it so that it does not copy
-    kfree((void*) pa); 
-
-    uvmunmap(p->pagetable, pageFaultva, 1, 0);
-    
-    if(mappages(p->pagetable, pageFaultva, PGSIZE, (uint64)mem, flags) != 0){
-      kfree(mem);
-      goto err;
+    // * TODO: last page referencing the COW page will also make a copy
+    // * TODO: try to make it so that it does not copy
+    if(getRef(pa) == 1){
+      uvmunmap(p->pagetable,pageFaultva,1,0);
+      if(mappages(p->pagetable, pageFaultva, PGSIZE, (uint64)pa, flags) != 0){
+        panic("usertrap(): cowpage modify mapping");
+        goto err;
+      }
+      goto done;
     }
-    if(DEBUG) printf("new pagetable created\n");
-    goto done;
+    else{
+    //!
+      char* mem;
+
+      if((mem = kalloc()) == 0)
+        goto err;
+      memmove(mem ,(char*)pa, PGSIZE);
+
+      kfree((void*) pa); 
+
+      uvmunmap(p->pagetable, pageFaultva, 1, 0);
+      
+      if(mappages(p->pagetable, pageFaultva, PGSIZE, (uint64)mem, flags) != 0){
+        kfree(mem);
+        goto err;
+      }
+      if(DEBUG) printf("new pagetable created\n");
+      goto done;
+    }
 
     err:
     panic("usertrap(): unmapping");

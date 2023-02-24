@@ -305,7 +305,7 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
-  // sys_getPageInfo();
+  sys_getPageInfo();
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
