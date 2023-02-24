@@ -1,26 +1,62 @@
-#include "kernel/types.h"
-#include "kernel/stat.h"
-#include "user/user.h"
-#include "kernel/memlayout.h"
+//
+// tests for copy-on-write fork() assignment.
+//
 
-int main()
+#include "kernel/types.h"
+#include "kernel/memlayout.h"
+#include "user/user.h"
+
+// allocate more than half of physical memory,
+// then fork. this will fail in the default
+// kernel, which does not support copy-on-write.
+void
+simpletest()
 {
-    int a=2;
-    a = a*2;
-    // char *p = sbrk((PHYSTOP - KERNBASE) / 3);
-    // *(int*) p = 1234;
-    int pid = fork();
-    getPageInfo();
-    sleep(1);
-    if(pid == 0){
-        // sbrk((PHYSTOP - KERNBASE) / 3);
-        // char *p = sbrk((PHYSTOP - KERNBASE) / 3);
-        // for(char* q = p; q < p + (PHYSTOP - KERNBASE) / 3; q+=4096){
-        //     *(int*) q = 1234;
-        // }
-    }
-    wait(0);
-    getPageInfo();
-    sleep(1);
-    return 0;
+  uint64 phys_size = PHYSTOP - KERNBASE;
+  int sz = (phys_size / 3) * 2;
+
+  printf("simple: ");
+  getPageInfo();
+  
+  char *p = sbrk(sz);
+  if(p == (char*)0xffffffffffffffffL){
+    printf("sbrk(%d) failed\n", sz);
+    exit(-1);
+  }
+  printf("allocated\n");
+  getPageInfo();
+
+  for(char *q = p; q < p + sz; q += 4096){
+    *(int*)q = getpid();
+  }
+  printf("written\n");
+  getPageInfo();
+
+  int pid = fork();
+  if(pid < 0){
+    printf("fork() failed\n");
+    exit(-1);
+  }
+  printf("new fork\n");
+  getPageInfo();
+
+  if(pid == 0)
+    exit(0);
+
+  wait(0);
+
+  if(sbrk(-sz) == (char*)0xffffffffffffffffL){
+    printf("sbrk(-%d) failed\n", sz);
+    exit(-1);
+  }
+  getPageInfo();
+  printf("ok\n");
+}
+
+int
+main(int argc, char *argv[])
+{
+  simpletest();
+  printf("passed\n");
+  return 0;
 }

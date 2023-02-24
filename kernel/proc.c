@@ -299,12 +299,13 @@ fork(void)
 
   // Copy user memory from parent to child.
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
-    if(DEBUG) printf("In fork calling freeproc\n");
+    printf("In fork calling freeproc\n");
     freeproc(np);
     release(&np->lock);
     return -1;
   }
   np->sz = p->sz;
+  // sys_getPageInfo();
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
@@ -705,4 +706,15 @@ int getProcNumber(void)
     release(&p->lock);
   }
   return cnt;
+}
+
+void printAllProcMemory(){
+  struct proc *p;
+  for(p = proc; p < &proc[NPROC]; p++){
+    // acquire(&p->lock);
+    if(p->state != UNUSED){
+      printf("Process pid: %d has page: %d\n", p->pid, p->sz / PGSIZE);
+    }
+    // release(&p->lock);
+  }
 }

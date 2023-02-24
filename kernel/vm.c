@@ -93,6 +93,7 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
     if(*pte & PTE_V) {
       pagetable = (pagetable_t)PTE2PA(*pte);
     } else {
+      if(alloc) printf("creating PTE Table\n");
       if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
         return 0;
       memset(pagetable, 0, PGSIZE);
@@ -315,7 +316,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   uint64 pa, i;
   uint flags;
   // char *mem;
-  if(DEBUG) printf("in uvmcopy\n");
+  // printf("in uvmcopy\n");
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
@@ -347,6 +348,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     if(mappages(old, i, PGSIZE, (uint64)pa, flags) != 0){
       goto err;
     }
+
     // sys_getPageInfo();
   }
   return 0;
@@ -377,6 +379,7 @@ uvmclear(pagetable_t pagetable, uint64 va)
 int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
+  printf("copy out\n");
   uint64 n, va0, pa0;
 
   while(len > 0){

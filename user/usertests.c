@@ -76,6 +76,7 @@ copyin(char *s)
 void
 copyout(char *s)
 {
+  // printf("copy out\n");
   uint64 addrs[] = { 0x80000000LL, 0xffffffffffffffff };
 
   for(int ai = 0; ai < 2; ai++){
