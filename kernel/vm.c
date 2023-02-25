@@ -326,6 +326,11 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
+    if(flags & PTE_W){
+      flags |= PTE_SVW;
+    }else{
+      flags &= ~(PTE_SVW);
+    }
     flags &= (~PTE_W);
     flags |= (PTE_COW);
 

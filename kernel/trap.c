@@ -112,10 +112,13 @@ usertrap(void)
     uint64 pa = PTE2PA(*pte);
     uint flags = PTE_FLAGS(*pte);
 
-    if(!(flags & PTE_COW))
-      panic("usertrap() : page fault without COW\n");
+    if(!(flags & PTE_COW)){
+      setkilled(p);
+      goto ifBlockEnd;
+    }
+      // panic("usertrap() : page fault without COW\n");
 
-    flags |= PTE_W;
+    if(flags & PTE_SVW) flags |= PTE_W;
     flags &= (~PTE_COW); 
 
     if(DEBUG) printf("physical address: ");
