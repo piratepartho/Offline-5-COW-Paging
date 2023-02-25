@@ -379,7 +379,7 @@ uvmclear(pagetable_t pagetable, uint64 va)
 int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
-  printf("copy out\n");
+  // printf("copy out\n");
   uint64 n, va0, pa0;
 
   while(len > 0){
