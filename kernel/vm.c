@@ -184,7 +184,7 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
     if((*pte & PTE_V) == 0)
       panic("uvmunmap: not mapped");
     if(PTE_FLAGS(*pte) == PTE_V){
-      bin(PTE_FLAGS(*pte));
+      if(DEBUG) bin(PTE_FLAGS(*pte));
       panic("uvmunmap: not a leaf");
     }
       
