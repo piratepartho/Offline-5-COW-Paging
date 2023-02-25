@@ -136,6 +136,7 @@ UPROGS=\
 	$U/_sysinfotest\
 	$U/_cowtest5\
 	$U/_cowAll\
+	$U/_writeMemory\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

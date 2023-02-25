@@ -91,7 +91,7 @@ usertrap(void)
     // since for trap 'f' we are allocating the page without
     // looking at the va, we might allocate to a address 128MB
     // previously it was handled in else block, copied setkilled(p) 
-    if(r_stval() >= MAXVA){
+    if(r_stval() >= MAXVA || r_stval() == 0){
       printf("Accessing above the va\n");
       setkilled(p);
       goto ifBlockEnd;

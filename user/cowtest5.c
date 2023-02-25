@@ -2,27 +2,47 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 #include "kernel/memlayout.h"
-
+#define PNWRITE 500
 int main()
 {
-    int a=2;
-    a = a*2;
-    // char *p = sbrk((PHYSTOP - KERNBASE) / 3);
-    // (int) p = 1234;
-    getPageInfo();
+    char* p = sbrk(4096*500);
+    int initPN = getPageInfo();
+
     int pid = fork();
-    getPageInfo();
-    sleep(1);
-    if(pid >= 0){
-        // sbrk((PHYSTOP - KERNBASE) / 3);
-        char *p = sbrk((PHYSTOP - KERNBASE) / 3);
-        for(char* q = p; q < p + (PHYSTOP - KERNBASE) / 3; q+=4096){
+
+    if(pid < 0){
+        printf("fork failed\n");
+        exit(-1);
+    }
+    int forkPN = getPageInfo();
+
+    if(forkPN - initPN > 6) {
+        printf("page cow failed\n");
+        exit(-1);
+    }
+
+    if(pid == 0){
+        for(char* q = p; q < p+4096*PNWRITE; q+=4096){
             *(int*) q = 1234;
         }
+        int afterWritePN = getPageInfo();
+        // printf("%d\n",afterWritePN-forkPN);
+        if(forkPN - afterWritePN != PNWRITE) {
+            printf("page write not working\n");
+            exit(-1);
+        }
+        printf("page write working\n");
+        exit(0);
     }
     wait(0);
-    sleep(1);
-    getPageInfo();
-    sleep(1);
+    int donePN= getPageInfo();
+    if(donePN != initPN){
+        printf("page garbage error\n");
+        exit(-1);
+    }
+    printf("no garbage page\n");
+    
+    printf("Cowtest 5 : Passed\n");
+
     return 0;
 }

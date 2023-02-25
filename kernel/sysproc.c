@@ -109,8 +109,8 @@ sys_sysinfo(void)
 uint64
 sys_getPageInfo(void)
 {
-  printAllProcMemory();
+  // printAllProcMemory();
   if(getFreeMemorySize() % PGSIZE) panic("not divisible sys_getPageInfo()");
-  printf("free pages: %d\n", getFreeMemorySize() / PGSIZE);
-  return 1;
+  // printf("free pages: %d\n", getFreeMemorySize() / PGSIZE);
+  return getFreeMemorySize() / PGSIZE;
 }
