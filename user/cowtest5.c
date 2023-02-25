@@ -2,10 +2,16 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 #include "kernel/memlayout.h"
-#define PNWRITE 500
+#define PNWRITE 1024
 int main()
 {
-    char* p = sbrk(4096*500);
+    char* p = sbrk(4096*PNWRITE);
+
+    if(p == (char*)-1){
+        printf("sbrk failed\n");
+        exit(-1);
+    }
+
     int initPN = getPageInfo();
 
     int pid = fork();
@@ -26,7 +32,6 @@ int main()
             *(int*) q = 1234;
         }
         int afterWritePN = getPageInfo();
-        // printf("%d\n",afterWritePN-forkPN);
         if(forkPN - afterWritePN != PNWRITE) {
             printf("page write not working\n");
             exit(-1);
