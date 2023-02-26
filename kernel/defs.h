@@ -8,6 +8,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct swap;
 
 // bio.c
 void            binit(void);
@@ -36,6 +37,8 @@ int             filewrite(struct file*, uint64, int n);
 
 // fs.c
 void            fsinit(int);
+uint            balloc(uint dev);
+void            bfree(int dev, uint b);
 int             dirlink(struct inode*, char*, uint);
 struct inode*   dirlookup(struct inode*, char*, uint*);
 struct inode*   ialloc(uint, short);
@@ -106,6 +109,13 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
+
+// swap.c
+void            swapinit(void);
+void            swapfree(struct swap*);
+struct swap*    swapalloc(void);
+void            swapout(struct swap *dst_sp, char *src_pa);
+void            swapin(char *dst_pa, struct swap *src_sp);
 
 // swtch.S
 void            swtch(struct context*, struct context*);

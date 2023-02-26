@@ -62,7 +62,7 @@ bzero(int dev, int bno)
 
 // Allocate a zeroed disk block.
 // returns 0 if out of disk space.
-static uint
+uint
 balloc(uint dev)
 {
   int b, bi, m;
@@ -88,7 +88,7 @@ balloc(uint dev)
 }
 
 // Free a disk block.
-static void
+void
 bfree(int dev, uint b)
 {
   struct buf *bp;
