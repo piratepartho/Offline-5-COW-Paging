@@ -37,6 +37,7 @@ struct{
   struct spinlock lock;
   struct pageStatus *freeList;
   struct pageStatus *liveList;
+  int liveCnt;
 } pages;
 
 
@@ -45,6 +46,7 @@ void initLivePage(){
   acquire(&pages.lock);
   pages.freeList = 0;
   pages.liveList = 0;
+  pages.liveCnt = 0;
 
   for(int i = 0; i < STATUSSIZE; i++)
   {
@@ -80,6 +82,7 @@ void addToLivePage(uint64 pa){
   if(pages.liveList == 0){
     pages.liveList = pg;
     pg->next = 0;
+    pages.liveCnt++;
     release(&pages.lock);
     return;
   }
@@ -88,6 +91,7 @@ void addToLivePage(uint64 pa){
   for(i = pages.liveList; i->next != 0 ; i = i->next) ; // go to the last livepage
   i->next = pg; // add the pageStatus to liveList
   pg->next = 0; // at the end added
+  pages.liveCnt++;
 
   release(&pages.lock);
 }
@@ -99,6 +103,7 @@ void addToFreeList(struct pageStatus* pg){
 
   pg->next = pages.freeList;
   pages.freeList = pg;
+  pages.liveCnt--;
 }
 
 void removeFromLivePage(uint64 pa){
@@ -109,6 +114,7 @@ void removeFromLivePage(uint64 pa){
   
   while(1){
     if(pg == 0){
+      //! gives an error initially that case error has been skipped
       release(&pages.lock);
       break;
     }
@@ -228,6 +234,7 @@ sys_getLivePage(void)
     if(cnt[n] > 0) printf("pid: %d, live pages: %d\n",n,cnt[n]);
   }
   
+  printf("total live pages: %d\n ", pages.liveCnt);
   release(&pages.lock);
   
   return 0;
