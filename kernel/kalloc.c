@@ -10,6 +10,8 @@
 #include "defs.h"
 #include "proc.h"
 
+#define STATUSSIZE 1000
+
 void freerange(void *pa_start, void *pa_end);
 
 extern char end[]; // first address after kernel.
@@ -38,23 +40,30 @@ struct{
 
 
 void initLivePage(){
-  char* start;
-  // printf("Here1\n");
-  if((start = kalloc()) == 0){
-    panic("initLivePage(): bad kalloc");
-  }
-
+  
   acquire(&pages.lock);
-  // printf("lock acquired"); 
   pages.freeList = 0;
   pages.liveList = 0;
 
-  for(uint64 i = (uint64)start; i+sizeof(struct pageStatus) < (uint64)start+PGSIZE; i += sizeof(struct pageStatus)){ // i is the physical address
-    struct pageStatus *s;
-    s = (struct pageStatus*) i; // make the pa pageStatus pointer
-    s->next = pages.freeList;
-    pages.freeList = s;
+  for(int i = 0; i < STATUSSIZE; i++)
+  {
+    char* start;
+    // printf("Here1\n");
+    if((start = kalloc()) == 0){
+      panic("initLivePage(): bad kalloc");
+    }
+    for(uint64 i = (uint64) start; i+sizeof(struct pageStatus) < (uint64)start + PGSIZE; i += sizeof(struct pageStatus)){ // i is the physical address
+      struct pageStatus *s;
+      s = (struct pageStatus*) i; // make the pa pageStatus pointer
+      s->next = pages.freeList;
+      pages.freeList = s;
+    }
   }
+
+  // printf("lock acquired"); 
+  
+
+  
   release(&pages.lock);
 }
 
@@ -62,7 +71,10 @@ void addToLivePage(uint64 pa){
   acquire(&pages.lock);
 
   struct pageStatus* pg = pages.freeList;
-  if(pg == 0) panic("addToLivePage() : no free pages");
+  if(pg == 0) {
+    // sys_getLivePage();
+    panic("addToLivePage() : no free pages");
+  }
   pages.freeList = pg->next;
 
   pg->pid = myproc()->pid;
@@ -87,9 +99,7 @@ void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
-  //added one page to kernel
   freerange(end, (void*) PHYSTOP); 
-  // freerange(end, (void*)PHYSTOP);
   initLivePage();
 }
 
@@ -125,6 +135,12 @@ kfree(void *pa)
   release(&kmem.lock);
 }
 
+void 
+ukfree(void *pa)
+{
+  kfree(pa);
+}
+
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns 0 if the memory cannot be allocated.
@@ -153,7 +169,6 @@ ukalloc(void){
   addToLivePage((uint64)r);
 
   return (void*) r;
-
 }
 
 
