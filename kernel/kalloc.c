@@ -9,6 +9,7 @@
 #include "riscv.h"
 #include "defs.h"
 #include "proc.h"
+#include <inttypes.h>
 
 #define STATUSSIZE 1000
 
@@ -37,6 +38,8 @@ struct{
   struct pageStatus *freeList;
   struct pageStatus *liveList;
 } pages;
+
+
 
 
 void initLivePage(){
@@ -95,6 +98,44 @@ void addToLivePage(uint64 pa){
   release(&pages.lock);
 }
 
+void addToFreeList(struct pageStatus* pg){
+  // assumed lock help by caller
+  pg->pid = -1;
+  pg->pa = -1;
+
+  pg->next = pages.liveList;
+  pages.liveList = pg;
+}
+
+void removeFromLivePage(uint64 pa){
+  acquire(&pages.lock);
+
+  struct pageStatus* pg = pages.liveList;
+  struct pageStatus* prev = 0;
+  
+  while(1){
+    if(pg == 0){
+      printf("rmLivePage() : no %d in Live\n", pa);
+      release(&pages.lock);
+      break;
+    }
+
+    // printf("here %d %d\n", pg->pid, pg->pa);
+
+    if(pg->pa == pa){
+      if(prev != 0) prev->next = pg->next;
+      else pages.liveList = pg->next;
+      addToFreeList(pg);
+      release(&pages.lock);
+      break;
+    }
+
+    prev = pg;
+    pg = pg->next;
+  
+  }
+}
+
 void
 kinit()
 {
@@ -138,6 +179,7 @@ kfree(void *pa)
 void 
 ukfree(void *pa)
 {
+  removeFromLivePage((uint64) pa);
   kfree(pa);
 }
 
