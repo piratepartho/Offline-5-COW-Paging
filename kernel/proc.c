@@ -56,7 +56,6 @@ procinit(void)
       p->state = UNUSED;
       p->kstack = KSTACK((int) (p - proc));
   }
-  printf("finished procinit\n");
 }
 
 // Must be called with interrupts disabled,
@@ -445,7 +444,6 @@ wait(uint64 addr)
 void
 scheduler(void)
 {
-  printf("sched start\n");
   struct proc *p;
   struct cpu *c = mycpu();
   

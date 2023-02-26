@@ -40,8 +40,6 @@ struct{
 } pages;
 
 
-
-
 void initLivePage(){
   
   acquire(&pages.lock);
@@ -51,7 +49,7 @@ void initLivePage(){
   for(int i = 0; i < STATUSSIZE; i++)
   {
     char* start;
-    // printf("Here1\n");
+    
     if((start = kalloc()) == 0){
       panic("initLivePage(): bad kalloc");
     }
@@ -63,10 +61,6 @@ void initLivePage(){
     }
   }
 
-  // printf("lock acquired"); 
-  
-
-  
   release(&pages.lock);
 }
 
@@ -103,8 +97,8 @@ void addToFreeList(struct pageStatus* pg){
   pg->pid = -1;
   pg->pa = -1;
 
-  pg->next = pages.liveList;
-  pages.liveList = pg;
+  pg->next = pages.freeList;
+  pages.freeList = pg;
 }
 
 void removeFromLivePage(uint64 pa){
@@ -115,7 +109,6 @@ void removeFromLivePage(uint64 pa){
   
   while(1){
     if(pg == 0){
-      printf("rmLivePage() : no %d in Live\n", pa);
       release(&pages.lock);
       break;
     }
@@ -224,12 +217,13 @@ sys_getLivePage(void)
   for(int n = 0; n < NPROC; n++){
     cnt[n] = 0;
   }
-
+  // printf("here1");
   struct pageStatus *i;
   for(i = pages.liveList; i != 0; i = i->next){
+    // printf("pid: %d",i->pid);
     cnt[ i->pid ]++; 
   }
-  
+  // printf("here2");
   for(int n = 0; n < NPROC; n++){
     if(cnt[n] > 0) printf("pid: %d, live pages: %d\n",n,cnt[n]);
   }
