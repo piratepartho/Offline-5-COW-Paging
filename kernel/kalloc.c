@@ -8,6 +8,7 @@
 #include "spinlock.h"
 #include "riscv.h"
 #include "defs.h"
+#include "proc.h"
 
 void freerange(void *pa_start, void *pa_end);
 
@@ -24,7 +25,8 @@ struct {
 } kmem;
 
 struct pageStatus{
-  int pid;
+  uint pid;
+  uint64 pa;
   struct pageStatus *next;
 };
 
@@ -37,15 +39,17 @@ struct{
 
 void initLivePage(){
   char* start;
+  // printf("Here1\n");
   if((start = kalloc()) == 0){
     panic("initLivePage(): bad kalloc");
   }
 
-  acquire(&pages.lock); 
+  acquire(&pages.lock);
+  // printf("lock acquired"); 
   pages.freeList = 0;
   pages.liveList = 0;
 
-  for(uint64 i = (uint64)start; i < (uint64)start+PGSIZE; i += sizeof(struct pageStatus)){ // i is the physical address
+  for(uint64 i = (uint64)start; i+sizeof(struct pageStatus) < (uint64)start+PGSIZE; i += sizeof(struct pageStatus)){ // i is the physical address
     struct pageStatus *s;
     s = (struct pageStatus*) i; // make the pa pageStatus pointer
     s->next = pages.freeList;
@@ -54,9 +58,30 @@ void initLivePage(){
   release(&pages.lock);
 }
 
-// void addToLivePage(uint64 pa){
-  
-// }
+void addToLivePage(uint64 pa){
+  acquire(&pages.lock);
+
+  struct pageStatus* pg = pages.freeList;
+  if(pg == 0) panic("addToLivePage() : no free pages");
+  pages.freeList = pg->next;
+
+  pg->pid = myproc()->pid;
+  pg->pa = pa;
+
+  if(pages.liveList == 0){
+    pages.liveList = pg;
+    pg->next = 0;
+    release(&pages.lock);
+    return;
+  }
+
+  struct pageStatus* i;
+  for(i = pages.liveList; i->next != 0 ; i = i->next) ; // go to the last livepage
+  i->next = pg; // add the pageStatus to liveList
+  pg->next = 0; // at the end added
+
+  release(&pages.lock);
+}
 
 void
 kinit()
@@ -121,25 +146,38 @@ kalloc(void)
   return (void*)r; 
 }
 
+void *
+ukalloc(void){
+  char* r = kalloc();
+  
+  addToLivePage((uint64)r);
+
+  return (void*) r;
+
+}
+
 
 uint64
 sys_getLivePage(void)
 {
-  printf("%d\n",sizeof(struct pageStatus));
   acquire(&pages.lock);
-  // // printf("end[] address: %d", end);
-  // printf("%d %d\n",livePage.tail - livePage.head, livePage.tail);
+  
+  int cnt[NPROC]; //! should fail when pid is greater than NPROC, ignoring special case like this
+  
+  for(int n = 0; n < NPROC; n++){
+    cnt[n] = 0;
+  }
+
   struct pageStatus *i;
-  int cnt1 = 0, cnt2 = 0;
-  for(i = pages.freeList; i != 0 ;){
-    cnt1++;
-    i = i->next;
+  for(i = pages.liveList; i != 0; i = i->next){
+    cnt[ i->pid ]++; 
   }
-  for(i = pages.liveList; i != 0 ;){
-    cnt2++;
-    i = i->next;
+  
+  for(int n = 0; n < NPROC; n++){
+    if(cnt[n] > 0) printf("pid: %d, live pages: %d\n",n,cnt[n]);
   }
-  printf("%d %d\n",cnt1,cnt2);
+  
   release(&pages.lock);
+  
   return 0;
 }

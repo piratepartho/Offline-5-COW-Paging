@@ -56,6 +56,7 @@ procinit(void)
       p->state = UNUSED;
       p->kstack = KSTACK((int) (p - proc));
   }
+  printf("finished procinit\n");
 }
 
 // Must be called with interrupts disabled,
@@ -444,6 +445,7 @@ wait(uint64 addr)
 void
 scheduler(void)
 {
+  printf("sched start\n");
   struct proc *p;
   struct cpu *c = mycpu();
   
@@ -451,6 +453,7 @@ scheduler(void)
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
+    // printf("here1");
 
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
@@ -459,15 +462,18 @@ scheduler(void)
         // to release its lock and then reacquire it
         // before jumping back to us.
         p->state = RUNNING;
+        // printf("here 2 ");
+        // printf("pid: %d ", p->pid);
         c->proc = p;
         swtch(&c->context, &p->context);
-
+        // printf("here 3\n");
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
       }
       release(&p->lock);
     }
+    // printf("here4");
   }
 }
 
