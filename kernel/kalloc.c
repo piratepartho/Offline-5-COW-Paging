@@ -205,12 +205,12 @@ kfree(void *pa)
   release(&kmem.lock);
 }
 
-void 
-ukfree(pagetable_t pt, uint64 va, void *pa)
-{
-  removeFromLivePage(pt, va);
-  kfree(pa);
-}
+// void 
+// ukfree(pagetable_t pt, uint64 va, void *pa)
+// {
+//   removeFromLivePage(pt, va);
+//   kfree(pa);
+// }
 
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
@@ -233,14 +233,14 @@ kalloc(void)
   return (void*)r; 
 }
 
-void *
-ukalloc(pagetable_t pt, uint64 va){
-  char* r = kalloc();
+// void *
+// ukalloc(pagetable_t pt, uint64 va){
+//   char* r = kalloc();
   
-  addToLivePage(pt, va);
+//   addToLivePage(pt, va);
 
-  return (void*) r;
-}
+//   return (void*) r;
+// }
 
 
 uint64
@@ -257,6 +257,10 @@ sys_getLivePage(void)
   struct pageStatus *i;
   for(i = pages.liveList; i != 0; i = i->next){
     // printf("pid: %d",i->pid);
+    if( i->pid >= NPROC ){
+      printf("!!! pid > NPROC, per proc live page will show error. Total count ok. !!!\n");
+      break;
+    }
     cnt[ i->pid ]++; 
   }
   // printf("here2");
