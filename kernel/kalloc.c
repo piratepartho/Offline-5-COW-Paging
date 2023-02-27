@@ -12,6 +12,7 @@
 #include <inttypes.h>
 
 #define STATUSSIZE 1000
+#define MAXPHYPAGES 50
 
 void freerange(void *pa_start, void *pa_end);
 
@@ -40,7 +41,7 @@ struct{
   int liveCnt;
 } pages;
 
-
+int livepageswap = 1;
 void initLivePage(){
   
   acquire(&pages.lock);
@@ -92,6 +93,27 @@ void addToLivePage(uint64 pa){
   i->next = pg; // add the pageStatus to liveList
   pg->next = 0; // at the end added
   pages.liveCnt++;
+
+  if(pages.liveCnt >= 30 && livepageswap){
+    livepageswap = 0;
+    uint64 rem = pg->pa;
+
+    struct swap* sp = swapalloc();
+    printf("swapping cnt: %d\n",pages.liveCnt);
+    release(&pages.lock);
+    swapout(sp, (char*)pg->pa);
+    
+    removeFromLivePage(pg->pa);
+    sys_getLivePage();
+    swapin((char*) rem,sp);
+    
+    addToLivePage(rem);
+    sys_getLivePage();
+    
+    swapfree(sp);
+    
+    acquire(&pages.lock);
+  }
 
   release(&pages.lock);
 }

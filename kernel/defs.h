@@ -68,6 +68,10 @@ void            kfree(void *);
 void            kinit(void);
 void*           ukalloc(void);
 void            ukfree(void *);
+void            removeFromLivePage(uint64 pa);
+void            addToLivePage(uint64 pa);
+uint64          sys_getLivePage(void);
+
 
 // log.c
 void            initlog(int, struct superblock*);
