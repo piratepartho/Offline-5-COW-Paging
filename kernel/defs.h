@@ -66,10 +66,10 @@ void            ramdiskrw(struct buf*);
 void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
-void*           ukalloc(void);
-void            ukfree(void *);
-void            removeFromLivePage(uint64 pa);
-void            addToLivePage(uint64 pa);
+void*           ukalloc(pagetable_t, uint64);
+void            ukfree(pagetable_t, uint64, void *);
+// void            removeFromLivePage(uint64 pa);
+// void            addToLivePage(uint64 pa);
 uint64          sys_getLivePage(void);
 
 

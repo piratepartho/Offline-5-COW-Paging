@@ -30,7 +30,8 @@ struct {
 
 struct pageStatus{
   uint pid;
-  uint64 pa;
+  pagetable_t pt;
+  uint64 va;
   struct pageStatus *next;
 };
 
@@ -67,7 +68,7 @@ void initLivePage(){
   release(&pages.lock);
 }
 
-void addToLivePage(uint64 pa){
+void addToLivePage(pagetable_t pt, uint64 va){
   acquire(&pages.lock);
 
   struct pageStatus* pg = pages.freeList;
@@ -78,7 +79,8 @@ void addToLivePage(uint64 pa){
   pages.freeList = pg->next;
 
   pg->pid = myproc()->pid;
-  pg->pa = pa;
+  pg->pt = pt;
+  pg->va = va;
 
   if(pages.liveList == 0){
     pages.liveList = pg;
@@ -94,26 +96,26 @@ void addToLivePage(uint64 pa){
   pg->next = 0; // at the end added
   pages.liveCnt++;
 
-  if(pages.liveCnt >= 30 && livepageswap){
-    livepageswap = 0;
-    uint64 rem = pg->pa;
+  // if(pages.liveCnt >= 30 && livepageswap){
+  //   livepageswap = 0;
+  //   uint64 rem = pg->pa;
 
-    struct swap* sp = swapalloc();
-    printf("swapping cnt: %d\n",pages.liveCnt);
-    release(&pages.lock);
-    swapout(sp, (char*)pg->pa);
+  //   struct swap* sp = swapalloc();
+  //   printf("swapping cnt: %d\n",pages.liveCnt);
+  //   release(&pages.lock);
+  //   swapout(sp, (char*)pg->pa);
     
-    removeFromLivePage(pg->pa);
-    sys_getLivePage();
-    swapin((char*) rem,sp);
+  //   removeFromLivePage(pg->pa);
+  //   sys_getLivePage();
+  //   swapin((char*) rem,sp);
     
-    addToLivePage(rem);
-    sys_getLivePage();
+  //   addToLivePage(rem);
+  //   sys_getLivePage();
     
-    swapfree(sp);
+  //   swapfree(sp);
     
-    acquire(&pages.lock);
-  }
+  //   acquire(&pages.lock);
+  // }
 
   release(&pages.lock);
 }
@@ -121,14 +123,15 @@ void addToLivePage(uint64 pa){
 void addToFreeList(struct pageStatus* pg){
   // assumed lock help by caller
   pg->pid = -1;
-  pg->pa = -1;
+  pg->pt = (pagetable_t) -1;
+  pg->va = -1;
 
   pg->next = pages.freeList;
   pages.freeList = pg;
   pages.liveCnt--;
 }
 
-void removeFromLivePage(uint64 pa){
+void removeFromLivePage(pagetable_t pt, uint64 va){
   acquire(&pages.lock);
 
   struct pageStatus* pg = pages.liveList;
@@ -137,13 +140,14 @@ void removeFromLivePage(uint64 pa){
   while(1){
     if(pg == 0){
       //! gives an error initially that case error has been skipped
+      printf("oh no\n");
       release(&pages.lock);
       break;
     }
 
     // printf("here %d %d\n", pg->pid, pg->pa);
 
-    if(pg->pa == pa){
+    if(pg->va == va && pg->pt == pt){
       if(prev != 0) prev->next = pg->next;
       else pages.liveList = pg->next;
       addToFreeList(pg);
@@ -198,9 +202,9 @@ kfree(void *pa)
 }
 
 void 
-ukfree(void *pa)
+ukfree(pagetable_t pt, uint64 va, void *pa)
 {
-  removeFromLivePage((uint64) pa);
+  removeFromLivePage(pt, va);
   kfree(pa);
 }
 
@@ -226,10 +230,10 @@ kalloc(void)
 }
 
 void *
-ukalloc(void){
+ukalloc(pagetable_t pt, uint64 va){
   char* r = kalloc();
   
-  addToLivePage((uint64)r);
+  addToLivePage(pt, va);
 
   return (void*) r;
 }
