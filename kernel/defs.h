@@ -68,8 +68,8 @@ void            kfree(void *);
 void            kinit(void);
 void*           ukalloc(pagetable_t, uint64);
 void            ukfree(pagetable_t, uint64, void *);
-// void            removeFromLivePage(uint64 pa);
-// void            addToLivePage(uint64 pa);
+void            removeFromLivePage(pagetable_t, uint64);
+void            addToLivePage(pagetable_t, uint64);
 uint64          sys_getLivePage(void);
 
 

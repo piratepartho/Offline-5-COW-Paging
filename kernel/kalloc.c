@@ -96,26 +96,30 @@ void addToLivePage(pagetable_t pt, uint64 va){
   pg->next = 0; // at the end added
   pages.liveCnt++;
 
-  // if(pages.liveCnt >= 30 && livepageswap){
-  //   livepageswap = 0;
-  //   uint64 rem = pg->pa;
+  if(pages.liveCnt >= 30 && livepageswap){
+    livepageswap = 0;
+    pagetable_t rempt = pg->pt;
+    uint64 remva = pg->va;
+    uint64 pa = PTE2PA(*walk(rempt, remva, 0));
+    printf("%d %d %d\n", rempt, remva, pa);
 
-  //   struct swap* sp = swapalloc();
-  //   printf("swapping cnt: %d\n",pages.liveCnt);
-  //   release(&pages.lock);
-  //   swapout(sp, (char*)pg->pa);
+    struct swap* sp = swapalloc();
+    printf("swapping cnt: %d\n",pages.liveCnt);
+    release(&pages.lock);
     
-  //   removeFromLivePage(pg->pa);
-  //   sys_getLivePage();
-  //   swapin((char*) rem,sp);
+    // swapout(sp, (char*) pa);
     
-  //   addToLivePage(rem);
-  //   sys_getLivePage();
+    removeFromLivePage(pt, va);
+    sys_getLivePage();
+    // swapin((char *) pa,sp);
     
-  //   swapfree(sp);
+    addToLivePage(rempt, remva);
+    sys_getLivePage();
     
-  //   acquire(&pages.lock);
-  // }
+    swapfree(sp);
+    
+    acquire(&pages.lock);
+  }
 
   release(&pages.lock);
 }
