@@ -488,8 +488,10 @@ sched(void)
 
   if(!holding(&p->lock))
     panic("sched p->lock");
-  if(mycpu()->noff != 1){
+  while(mycpu()->noff != 1){
+    printf("%d\n", mycpu()->noff);
     panic("sched locks");
+    printf("noff %d\n",mycpu()->noff);
   }
     
   if(p->state == RUNNING)

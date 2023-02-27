@@ -48,11 +48,11 @@ struct swapStatus{
   uint pid;
   pagetable_t pt;
   uint64 va;
-  struct swapStatus* next;
+  struct swapStatus *next;
 };
 
 struct{
-  struct spinlock lock;
+  // struct spinlock lock; // swap will use pages lock
   struct swapStatus* liveList;
   struct swapStatus* freeList;
 } swapList;
@@ -84,7 +84,7 @@ void initLivePage(){
 }
 
 void initSwapPage(){
-  acquire(&swapList.lock);
+  acquire(&pages.lock);
 
   swapList.freeList = 0;
   swapList.liveList = 0;
@@ -102,21 +102,61 @@ void initSwapPage(){
     }
   }
 
-  release(&swapList.lock);
+  release(&pages.lock);
 }
 
-//assumes pages lock is held by addToLive
-void fifoSwap(){
-  // struct pageStatus* firstLive = pages.liveList;
+void addToSwap(struct swap* sp, struct pageStatus* pg){
+  struct swapStatus* curr = swapList.freeList;
+  if(curr == 0){
+    panic("addToSwap(): no free pages");
+  }
+  swapList.freeList = curr->next;
+
+  curr->sp = sp;
+  curr->pid = pg->pid;
+  curr->pt = pg->pt;
+  curr->va = pg->va;
+
+  curr->next = swapList.liveList;
+  swapList.liveList = curr;
+}
+
+void fifoSwapOut(){
+  acquire(&pages.lock);
+  struct pageStatus* firstLive = pages.liveList;
+  uint64 pa = PTE2PA(*walk(firstLive->pt, firstLive->va, 0));
+  if(pa == 0){
+    panic("fifoSO() : invalid pte");
+  }
+  
+  release(&pages.lock);
+  printf("allcating %d",mycpu()->noff);
+  struct swap* sp = swapalloc();
+  printf("swapalloc done\n");
+  printf("noff %d\n",mycpu()->noff);
+  swapout(sp, (char *) pa);
+  printf("swapout done\n");
+  acquire(&pages.lock); // holding it for both swappages and pageslock
+  addToSwap(sp,firstLive);
+  woLcRemoveFromLivePage(firstLive->pt, firstLive->va);
+
+  release(&pages.lock);
 }
 
 void addToLivePage(pagetable_t pt, uint64 va){
+  printf("start addLive noff %d\n",mycpu()->noff);
   acquire(&pages.lock);
 
-  if(pages.liveCnt == 50){
+  while(pages.liveCnt >= 50){
     // first page swapped, new page still need to be added
     //liveCnt should be updated by fifoSwap()
-    fifoSwap(); 
+    printf("swapping in %d\n", pages.liveCnt);
+    printf("noff %d\n",mycpu()->noff);
+    release(&pages.lock);
+    printf("noff %d\n",mycpu()->noff);
+    fifoSwapOut(); 
+    printf("swapped out\n");
+    acquire(&pages.lock);
   }
 
   struct pageStatus* pg = pages.freeList;
@@ -148,7 +188,7 @@ void addToLivePage(pagetable_t pt, uint64 va){
 }
 
 void addToFreeList(struct pageStatus* pg){
-  // assumed lock help by caller
+  // assumed lock held by caller
   pg->pid = -1;
   pg->pt = (pagetable_t) -1;
   pg->va = -1;
@@ -179,6 +219,33 @@ void removeFromLivePage(pagetable_t pt, uint64 va){
       else pages.liveList = pg->next;
       addToFreeList(pg);
       release(&pages.lock);
+      break;
+    }
+
+    prev = pg;
+    pg = pg->next;
+  
+  }
+}
+
+void woLcRemoveFromLivePage(pagetable_t pt, uint64 va){
+
+  struct pageStatus* pg = pages.liveList;
+  struct pageStatus* prev = 0;
+  
+  while(1){
+    if(pg == 0){
+      //! gives an error initially that case error has been skipped
+      printf("oh no\n");
+      break;
+    }
+
+    // printf("here %d %d\n", pg->pid, pg->pa);
+
+    if(pg->va == va && pg->pt == pt){
+      if(prev != 0) prev->next = pg->next;
+      else pages.liveList = pg->next;
+      addToFreeList(pg);
       break;
     }
 
