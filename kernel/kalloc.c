@@ -12,6 +12,7 @@
 #include <inttypes.h>
 
 #define STATUSSIZE 1000
+#define SWAPSIZE 1000
 #define MAXPHYPAGES 50
 
 void freerange(void *pa_start, void *pa_end);
@@ -42,7 +43,21 @@ struct{
   int liveCnt;
 } pages;
 
-int livepageswap = 1;
+struct swapStatus{
+  struct swap* sp;
+  uint pid;
+  pagetable_t pt;
+  uint64 va;
+  struct swapStatus* next;
+};
+
+struct{
+  struct spinlock lock;
+  struct swapStatus* liveList;
+  struct swapStatus* freeList;
+} swapList;
+
+
 void initLivePage(){
   
   acquire(&pages.lock);
@@ -68,8 +83,41 @@ void initLivePage(){
   release(&pages.lock);
 }
 
+void initSwapPage(){
+  acquire(&swapList.lock);
+
+  swapList.freeList = 0;
+  swapList.liveList = 0;
+
+  for(int i = 0; i < SWAPSIZE; i++){
+    char* start;
+    if((start = kalloc()) == 0){
+      panic("initSwapPage(): bad alloc");
+    }
+    for(uint64 i = (uint64) start; i+sizeof(struct swapStatus) < (uint64) start + PGSIZE; i += sizeof(struct swapStatus)){
+      struct swapStatus *sp;
+      sp = (struct swapStatus*) i;
+      sp->next = swapList.freeList;
+      swapList.freeList = sp;
+    }
+  }
+
+  release(&swapList.lock);
+}
+
+//assumes pages lock is held by addToLive
+void fifoSwap(){
+  // struct pageStatus* firstLive = pages.liveList;
+}
+
 void addToLivePage(pagetable_t pt, uint64 va){
   acquire(&pages.lock);
+
+  if(pages.liveCnt == 50){
+    // first page swapped, new page still need to be added
+    //liveCnt should be updated by fifoSwap()
+    fifoSwap(); 
+  }
 
   struct pageStatus* pg = pages.freeList;
   if(pg == 0) {
@@ -95,31 +143,6 @@ void addToLivePage(pagetable_t pt, uint64 va){
   i->next = pg; // add the pageStatus to liveList
   pg->next = 0; // at the end added
   pages.liveCnt++;
-
-  if(pages.liveCnt >= 30 && livepageswap){
-    livepageswap = 0;
-    pagetable_t rempt = pg->pt;
-    uint64 remva = pg->va;
-    uint64 pa = PTE2PA(*walk(rempt, remva, 0));
-    printf("%d %d %d\n", rempt, remva, pa);
-
-    struct swap* sp = swapalloc();
-    printf("swapping cnt: %d\n",pages.liveCnt);
-    release(&pages.lock);
-    
-    // swapout(sp, (char*) pa);
-    
-    removeFromLivePage(pt, va);
-    sys_getLivePage();
-    // swapin((char *) pa,sp);
-    
-    addToLivePage(rempt, remva);
-    sys_getLivePage();
-    
-    swapfree(sp);
-    
-    acquire(&pages.lock);
-  }
 
   release(&pages.lock);
 }
@@ -171,6 +194,7 @@ kinit()
   initlock(&kmem.lock, "kmem");
   freerange(end, (void*) PHYSTOP); 
   initLivePage();
+  initSwapPage();
 }
 
 void
@@ -205,13 +229,6 @@ kfree(void *pa)
   release(&kmem.lock);
 }
 
-// void 
-// ukfree(pagetable_t pt, uint64 va, void *pa)
-// {
-//   removeFromLivePage(pt, va);
-//   kfree(pa);
-// }
-
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns 0 if the memory cannot be allocated.
@@ -232,16 +249,6 @@ kalloc(void)
   }
   return (void*)r; 
 }
-
-// void *
-// ukalloc(pagetable_t pt, uint64 va){
-//   char* r = kalloc();
-  
-//   addToLivePage(pt, va);
-
-//   return (void*) r;
-// }
-
 
 uint64
 sys_getLivePage(void)
