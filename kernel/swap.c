@@ -103,7 +103,7 @@ swapout(struct swap *dst_sp, char *src_pa)
   uint *blockno;
   struct buf *bp;
   begin_op();
-  printf("here1\n");
+  printf("swapout start\n");
   for(blockno = dst_sp->blocknos; blockno < &dst_sp->blocknos[NBLOCKPERPAGE]; blockno++, src_pa += BSIZE){
     *blockno = balloc(ROOTDEV);
     if(*blockno == 0)
@@ -113,7 +113,7 @@ swapout(struct swap *dst_sp, char *src_pa)
     log_write(bp);
     brelse(bp);
   }
-  printf("here 10\n");
+  printf("swapout start\n");
   end_op();
 }
 

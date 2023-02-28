@@ -55,6 +55,7 @@ struct{
   // struct spinlock lock; // swap will use pages lock
   struct swapStatus* liveList;
   struct swapStatus* freeList;
+  int swapSize;
 } swapList;
 
 
@@ -88,6 +89,7 @@ void initSwapPage(){
 
   swapList.freeList = 0;
   swapList.liveList = 0;
+  swapList.swapSize = 0;
 
   for(int i = 0; i < SWAPSIZE; i++){
     char* start;
@@ -119,44 +121,54 @@ void addToSwap(struct swap* sp, struct pageStatus* pg){
 
   curr->next = swapList.liveList;
   swapList.liveList = curr;
+  swapList.swapSize ++;
 }
 
 void fifoSwapOut(){
   acquire(&pages.lock);
   struct pageStatus* firstLive = pages.liveList;
-  uint64 pa = PTE2PA(*walk(firstLive->pt, firstLive->va, 0));
+
+  pte_t *pte = walk(firstLive->pt, firstLive->va, 0);
+  uint64 pa = PTE2PA(*pte);
+
   if(pa == 0){
     panic("fifoSO() : invalid pte");
   }
   
   release(&pages.lock);
+
   printf("allcating %d",mycpu()->noff);
+
   struct swap* sp = swapalloc();
   printf("swapalloc done\n");
-  printf("noff %d\n",mycpu()->noff);
+  // printf("noff %d\n",mycpu()->noff);
+
+  *pte |= PTE_SWAP;
   swapout(sp, (char *) pa);
+
   printf("swapout done\n");
+
   acquire(&pages.lock); // holding it for both swappages and pageslock
-  addToSwap(sp,firstLive);
+
+  addToSwap(sp, firstLive);
   woLcRemoveFromLivePage(firstLive->pt, firstLive->va);
 
   release(&pages.lock);
 }
 
 void addToLivePage(pagetable_t pt, uint64 va){
-  printf("start addLive noff %d\n",mycpu()->noff);
   acquire(&pages.lock);
 
-  while(pages.liveCnt >= 50){
+  while(pages.liveCnt >= MAXPHYPAGES){
     // first page swapped, new page still need to be added
     //liveCnt should be updated by fifoSwap()
     printf("swapping in %d\n", pages.liveCnt);
-    printf("noff %d\n",mycpu()->noff);
+
     release(&pages.lock);
-    printf("noff %d\n",mycpu()->noff);
     fifoSwapOut(); 
-    printf("swapped out\n");
     acquire(&pages.lock);
+
+    printf("swapped out\n");
   }
 
   struct pageStatus* pg = pages.freeList;
@@ -207,12 +219,11 @@ void removeFromLivePage(pagetable_t pt, uint64 va){
   while(1){
     if(pg == 0){
       //! gives an error initially that case error has been skipped
+      permissionPrint(pt,va);
       printf("oh no\n");
       release(&pages.lock);
       break;
     }
-
-    // printf("here %d %d\n", pg->pid, pg->pa);
 
     if(pg->va == va && pg->pt == pt){
       if(prev != 0) prev->next = pg->next;
@@ -346,4 +357,22 @@ sys_getLivePage(void)
   release(&pages.lock);
   
   return 0;
+}
+
+void permissionPrint(pagetable_t pt, uint64 va){
+  pte_t *pte = walk(pt, va, 0);
+  printf("va: %d pa: %d | ", va, PTE2PA(*pte));
+  if(*pte & PTE_SWAP) {
+    printf("SW ");
+  }
+  if(*pte & PTE_U) {
+    printf("U ");
+  }
+  if(*pte & PTE_X) {
+    printf("X ");
+  }
+  if(*pte & PTE_W) printf("W ");
+  if(*pte & PTE_R) printf("R ");
+  if(*pte & PTE_V) printf("V ");
+  printf("\n");
 }

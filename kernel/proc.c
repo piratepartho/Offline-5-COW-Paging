@@ -289,11 +289,13 @@ fork(void)
   }
 
   // Copy user memory from parent to child.
+  release(&np->lock);
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
     freeproc(np);
     release(&np->lock);
     return -1;
   }
+  acquire(&np->lock);
   np->sz = p->sz;
 
   // copy saved user registers.
@@ -393,6 +395,8 @@ wait(uint64 addr)
   struct proc *pp;
   int havekids, pid;
   struct proc *p = myproc();
+
+  printf("in wait\n");
 
   acquire(&wait_lock);
 
