@@ -20,14 +20,17 @@ int main()
         printf("fork failed\n");
         exit(-1);
     }
-    int forkPN = getPageInfo();
-
-    if(forkPN - initPN > 6) {
-        printf("page cow failed\n");
-        exit(-1);
-    }
+    
 
     if(pid == 0){
+
+        int forkPN = getPageInfo();
+
+        if(initPN - forkPN > 10) {
+            printf("page cow failed %d\n", initPN - forkPN);
+            exit(-1);
+        }
+
         for(char* q = p; q < p+4096*PNWRITE; q+=4096){
             *(int*) q = 1234;
         }
