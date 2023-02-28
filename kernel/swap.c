@@ -98,7 +98,7 @@ swapfree(struct swap *s)
   swapmem.freelist = r;
   release(&swapmem.lock);
 
-  printf("swapmem done\n");
+  printf("swapfree done\n");
 }
 
 // Swap out a given physical page src_pa to disk.

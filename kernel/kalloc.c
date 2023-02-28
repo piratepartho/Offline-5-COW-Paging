@@ -132,6 +132,7 @@ void removeFromSwapList(pagetable_t pt, uint64 va){
   while(1){
     if(curr == 0){
       permissionPrint(pt,va);
+      printf("oh no");
     }
 
     if(curr->va == va && curr->pt == pt){
@@ -176,8 +177,6 @@ void fifoSwapOut(){
   printf("allcating %d",mycpu()->noff);
 
   struct swap* sp = swapalloc();
-  printf("swapalloc done\n");
-  // printf("noff %d\n",mycpu()->noff);
 
   *pte |= PTE_SWAP;
   swapout(sp, (char *) pa);
@@ -186,6 +185,8 @@ void fifoSwapOut(){
 
   addToSwap(sp, firstLive);
   woLcRemoveFromLivePage(firstLive->pt, firstLive->va);
+
+  *pte &= ~PTE_W;
 
   release(&pages.lock);
 }
@@ -326,10 +327,11 @@ void swapToLive(pagetable_t pt, uint64 va){
       
       char* mem;
       if((mem = kalloc()) == 0){
+        release(&pages.lock);
         panic("swapToLive() : kalloc error");
         return;
       }
-
+      printf("here swl 1\n");
       release(&pages.lock);
       swapin(mem, curr->sp);
       swapfree(curr->sp);
@@ -345,6 +347,7 @@ void swapToLive(pagetable_t pt, uint64 va){
         panic("swapToLive(): mappages");
       }
 
+      printf("here swl 2\n");
       release(&pages.lock);
       addToLivePage(pt,va);
       acquire(&pages.lock);
@@ -368,6 +371,7 @@ void swapToLive(pagetable_t pt, uint64 va){
     prev = curr;
     curr = curr->next;
   }
+  release(&pages.lock);
 }
 
 void
