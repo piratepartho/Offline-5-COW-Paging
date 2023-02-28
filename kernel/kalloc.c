@@ -124,6 +124,7 @@ void addToSwap(struct swap* sp, struct pageStatus* pg){
   swapList.swapSize ++;
 }
 
+
 void removeFromSwapList(pagetable_t pt, uint64 va){
   struct swapStatus *curr = swapList.liveList;
   struct swapStatus *prev = 0;
@@ -297,8 +298,6 @@ void woLcRemoveFromLivePage(pagetable_t pt, uint64 va){
   }
 }
 
-
-
 void removePage(pagetable_t pt, uint64 va){
   acquire(&pages.lock);
 
@@ -310,6 +309,44 @@ void removePage(pagetable_t pt, uint64 va){
   else woLcRemoveFromLivePage(pt, va);
   
   release(&pages.lock);
+}
+
+void swapToLive(pagetable_t pt, uint64 va){
+  struct swapStatus *curr = swapList.liveList;
+  struct swapStatus *prev = 0;
+
+  while(1){
+    if(curr == 0){
+      permissionPrint(pt,va);
+    }
+
+    if(curr->va == va && curr->pt == pt){
+      
+      char* mem;
+      if((mem = kalloc()) == 0){
+        kfree()
+      }
+
+      if(prev != 0) prev->next = curr->next;
+      else swapList.liveList = curr->next;
+
+      
+      curr->pid = -1;
+      curr->pt = (pagetable_t) -1;
+      curr->va = -1;
+
+      curr->next = swapList.freeList;
+      swapList.freeList = curr;
+      swapList.swapSize--;
+
+      printf("removed, swap size: %d\n", swapList.swapSize);
+
+      break;
+    }
+
+    prev = curr;
+    curr = curr->next;
+  }
 }
 
 void
