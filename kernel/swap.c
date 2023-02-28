@@ -39,6 +39,8 @@ swapalloc(void)
   struct run *r;
   struct swap *s;
 
+  printf("swapalloc start\n");
+
   acquire(&swapmem.lock);
   r = swapmem.freelist;
   if(!r){
@@ -63,6 +65,8 @@ swapalloc(void)
   if(s)
     memset((char*)s->blocknos, 0, sizeof(s->blocknos)); // fill with zeros
   
+  printf("swapalloc done\n");
+
   return s;
 }
 
@@ -74,6 +78,8 @@ swapfree(struct swap *s)
 {
   uint *blockno;
   struct run *r;
+
+  printf("swapfree start\n");
 
   if(!s)
     panic("swapfree");
@@ -91,6 +97,8 @@ swapfree(struct swap *s)
   r->next = swapmem.freelist;
   swapmem.freelist = r;
   release(&swapmem.lock);
+
+  printf("swapmem done\n");
 }
 
 // Swap out a given physical page src_pa to disk.
@@ -113,8 +121,8 @@ swapout(struct swap *dst_sp, char *src_pa)
     log_write(bp);
     brelse(bp);
   }
-  printf("swapout start\n");
   end_op();
+  printf("swapout done\n");
 }
 
 // Swap in a page into dst_pa from disk using src_sp.
@@ -125,7 +133,7 @@ swapin(char *dst_pa, struct swap *src_sp)
 {
   uint *blockno;
   struct buf *bp;
-  
+  printf("swap in start\n");
   if(!dst_pa)
     panic("swapin");
   for(blockno = src_sp->blocknos; blockno < &src_sp->blocknos[NBLOCKPERPAGE]; blockno++, dst_pa += BSIZE){
@@ -133,4 +141,5 @@ swapin(char *dst_pa, struct swap *src_sp)
     memmove(dst_pa, bp->data, BSIZE);
     brelse(bp);
   }
+  printf("swapin done\n");
 }

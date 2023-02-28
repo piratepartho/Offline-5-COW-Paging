@@ -421,7 +421,13 @@ wait(uint64 addr)
             release(&wait_lock);
             return -1;
           }
+
+          release(&pp->lock);
+          release(&wait_lock);
           freeproc(pp);
+          acquire(&pp->lock);
+          acquire(&wait_lock);
+
           release(&pp->lock);
           release(&wait_lock);
           return pid;

@@ -146,7 +146,9 @@ void removeFromSwapList(pagetable_t pt, uint64 va){
       swapList.freeList = curr;
       swapList.swapSize--;
 
+      release(&pages.lock);
       swapfree(curr->sp);
+      acquire(&pages.lock);
 
       printf("removed, swap size: %d\n", swapList.swapSize);
 
@@ -205,7 +207,6 @@ void addToLivePage(pagetable_t pt, uint64 va){
 
   struct pageStatus* pg = pages.freeList;
   if(pg == 0) {
-    // sys_getLivePage();
     panic("addToLivePage() : no free pages");
   }
   pages.freeList = pg->next;
@@ -312,6 +313,7 @@ void removePage(pagetable_t pt, uint64 va){
 }
 
 void swapToLive(pagetable_t pt, uint64 va){
+  acquire(&pages.lock);
   struct swapStatus *curr = swapList.liveList;
   struct swapStatus *prev = 0;
 
@@ -328,8 +330,10 @@ void swapToLive(pagetable_t pt, uint64 va){
         return;
       }
 
+      release(&pages.lock);
       swapin(mem, curr->sp);
       swapfree(curr->sp);
+      acquire(&pages.lock);
 
       pte_t *pte = walk(pt, va, 0);
       *pte &= ~(PTE_SWAP);
@@ -341,7 +345,9 @@ void swapToLive(pagetable_t pt, uint64 va){
         panic("swapToLive(): mappages");
       }
 
+      release(&pages.lock);
       addToLivePage(pt,va);
+      acquire(&pages.lock);
 
       if(prev != 0) prev->next = curr->next;
       else swapList.liveList = curr->next;
