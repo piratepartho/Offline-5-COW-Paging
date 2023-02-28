@@ -146,6 +146,8 @@ void removeFromSwapList(pagetable_t pt, uint64 va){
       swapList.freeList = curr;
       swapList.swapSize--;
 
+      swapfree(curr->sp);
+
       printf("removed, swap size: %d\n", swapList.swapSize);
 
       break;
@@ -178,8 +180,6 @@ void fifoSwapOut(){
   *pte |= PTE_SWAP;
   swapout(sp, (char *) pa);
 
-  printf("swapout done\n");
-
   acquire(&pages.lock); // holding it for both swappages and pageslock
 
   addToSwap(sp, firstLive);
@@ -194,7 +194,7 @@ void addToLivePage(pagetable_t pt, uint64 va){
   while(pages.liveCnt >= MAXPHYPAGES){
     // first page swapped, new page still need to be added
     //liveCnt should be updated by fifoSwap()
-    printf("swapping in %d\n", pages.liveCnt);
+    printf("swap out cnt %d\n", pages.liveCnt);
 
     release(&pages.lock);
     fifoSwapOut(); 
@@ -324,12 +324,27 @@ void swapToLive(pagetable_t pt, uint64 va){
       
       char* mem;
       if((mem = kalloc()) == 0){
-        kfree()
+        panic("swapToLive() : kalloc error");
+        return;
       }
+
+      swapin(mem, curr->sp);
+      swapfree(curr->sp);
+
+      pte_t *pte = walk(pt, va, 0);
+      *pte &= ~(PTE_SWAP);
+      permissionPrint(pt, va);
+
+      uvmunmap(pt, va, 1, 0);
+      if (mappages(pt, va, PGSIZE, (uint64) mem, PTE_FLAGS(*pte)) < 0){
+        kfree(mem);
+        panic("swapToLive(): mappages");
+      }
+
+      addToLivePage(pt,va);
 
       if(prev != 0) prev->next = curr->next;
       else swapList.liveList = curr->next;
-
       
       curr->pid = -1;
       curr->pt = (pagetable_t) -1;
@@ -339,7 +354,7 @@ void swapToLive(pagetable_t pt, uint64 va){
       swapList.freeList = curr;
       swapList.swapSize--;
 
-      printf("removed, swap size: %d\n", swapList.swapSize);
+      printf("moved from swap, swap size: %d\n", swapList.swapSize);
 
       break;
     }

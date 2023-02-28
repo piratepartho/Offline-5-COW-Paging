@@ -289,6 +289,7 @@ fork(void)
   }
 
   // Copy user memory from parent to child.
+  printf("fork called\n");
   release(&np->lock);
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
     freeproc(np);
@@ -323,6 +324,8 @@ fork(void)
   acquire(&np->lock);
   np->state = RUNNABLE;
   release(&np->lock);
+
+  printf("fork done\n");
 
   return pid;
 }
@@ -435,6 +438,7 @@ wait(uint64 addr)
     
     // Wait for a child to exit.
     sleep(p, &wait_lock);  //DOC: wait-sleep
+    printf("wait done\n");
   }
 }
 

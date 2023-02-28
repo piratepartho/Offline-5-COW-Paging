@@ -322,7 +322,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     flags = PTE_FLAGS(*pte);
 
     if(flags & PTE_SWAP){
-      swapToLive(pt, va);
+      swapToLive(old, i);
     }
     
     if((mem = kalloc()) == 0)
