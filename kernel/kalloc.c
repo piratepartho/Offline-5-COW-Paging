@@ -124,6 +124,37 @@ void addToSwap(struct swap* sp, struct pageStatus* pg){
   swapList.swapSize ++;
 }
 
+void removeFromSwapList(pagetable_t pt, uint64 va){
+  struct swapStatus *curr = swapList.liveList;
+  struct swapStatus *prev = 0;
+
+  while(1){
+    if(curr == 0){
+      permissionPrint(pt,va);
+    }
+
+    if(curr->va == va && curr->pt == pt){
+      if(prev != 0) prev->next = curr->next;
+      else swapList.liveList = curr->next;
+      
+      curr->pid = -1;
+      curr->pt = (pagetable_t) -1;
+      curr->va = -1;
+
+      curr->next = swapList.freeList;
+      swapList.freeList = curr;
+      swapList.swapSize--;
+
+      printf("removed, swap size: %d\n", swapList.swapSize);
+
+      break;
+    }
+
+    prev = curr;
+    curr = curr->next;
+  }
+}
+
 void fifoSwapOut(){
   acquire(&pages.lock);
   struct pageStatus* firstLive = pages.liveList;
@@ -215,7 +246,7 @@ void removeFromLivePage(pagetable_t pt, uint64 va){
 
   struct pageStatus* pg = pages.liveList;
   struct pageStatus* prev = 0;
-  
+
   while(1){
     if(pg == 0){
       //! gives an error initially that case error has been skipped
@@ -264,6 +295,21 @@ void woLcRemoveFromLivePage(pagetable_t pt, uint64 va){
     pg = pg->next;
   
   }
+}
+
+
+
+void removePage(pagetable_t pt, uint64 va){
+  acquire(&pages.lock);
+
+  pte_t *pte = walk(pt, va, 0);
+
+  if(*pte & PTE_SWAP){
+    removeFromSwapList(pt, va);
+  }
+  else woLcRemoveFromLivePage(pt, va);
+  
+  release(&pages.lock);
 }
 
 void

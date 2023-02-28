@@ -73,6 +73,7 @@ void            addToLivePage(pagetable_t, uint64);
 uint64          sys_getLivePage(void);
 void            woLcRemoveFromLivePage(pagetable_t, uint64);
 void            permissionPrint(pagetable_t, uint64);
+void            removePage(pagetable_t, uint64);
 
 
 // log.c
