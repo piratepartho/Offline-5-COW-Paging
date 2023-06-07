@@ -1,0 +1,39 @@
+1. writing in kerneltrap() is creating problem. cannot understand the code as well.
+2. COW bit is not needed imo. But other write errors may also create copy. Better do some extra work.
+3. creating and allocating TLE page are hogging up memory. That's why after process end, some pages are used up.
+4. cow page no garbage collection given. i have modified usertrap to make the ghost page reuse rather than creating a new page ---- a87781d
+
+5. textwrite fail. according to the book va = 0 contains the codes of the process. textwrite is writing to it and creating a page error.
+	if the text code has no write permission, the fork creates a cow page with no write permission -> usertrap() creates a new page with write permission on
+	-> we are getting an error.
+	Probable solution : we should only create cow page for those with the write permission
+			    or set a new bit with original write permission attached to it. in usertrap use it to set the write bit.
+			    
+			    tried the first one. working fine except that pages are not becoming free. lost some free pages error in usertests. --> removing this for now.
+			    second one worked. YEEEEEEEEEEEEEEEEEEEEEEESSSSSSSSSSSSSSSSSSSSSSSSS!!!!
+			    
+			    but it is failing in other usertests now :) saved in extra-bit-use branch, removing everything for now in riscv branch
+			    
+6. 
+
+commit 
+original one ---- f5b93ef Update acks 61810 
+test 5 done  ---- 7e93d6d
+test 6 done  ----
+
+
+
+
+
+
+Paging ---- paging branch
+
+point 2 done ---- b3097c5
+point 2 with one page swapping ---- 698206f
+
+
+Issues - 
+1. syspagecnt pid only show 32 pid.
+2. before swapout, making sure to release the lock. in testing I was not releasing the pages lock, therefore, swapout before_op() log lock acquire was making
+	acquire level noff > 1. making sched locks (noff != 1) error. 
+3. i have been adding pa to the pageStatus, actually we need va. so ukalloc and ukfree are not needed. we should call addTolivePage and remove with va.
